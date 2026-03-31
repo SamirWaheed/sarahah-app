@@ -2,8 +2,8 @@ import {
     User
 } from "../../database/models/index.js";
 
-import { encrypt,decrypt } from "../../utils/encryption.utils.js";
-import { hashingPassword,verifyPassword } from "../../utils/hashing.utils.js";
+import { encryptionMethods ,hashingMethods,jwtMethods} from "../../utils/utils.index.js";
+
 
 export const signUp = async (body) => {
 
@@ -34,7 +34,7 @@ export const signUp = async (body) => {
         })
     }
 
-    const hashPass = await hashingPassword(password)
+    const hashPass = await hashingMethods.hashingPassword(password)
     
     const user =  {
         firstName,
@@ -46,7 +46,7 @@ export const signUp = async (body) => {
     }
 
     if(phone){
-        user.phone = encrypt(phone)
+        user.phone = encryptionMethods.encrypt(phone)
     }
     const newUser = await User.create(user);
     return newUser
@@ -65,24 +65,21 @@ export const login = async (body)=>{
         })
         
     }
-    console.log(user.password)
+  
     
-      const verify = await verifyPassword(user.password,password)
+      const verify = await hashingMethods.verifyPassword(user.password,password)
 
       if (!verify){
         throw new Error("Invalid Password",{cause:{status:409}})
       }
+       
+      const payload = { id:user._id ,
+                        role:user.role
+      }
+      const token = jwtMethods.generateToken(payload)
 
-      return user
+      const {password:hashedPass, ...safeUser} = user.toObject();
+      return {user:safeUser,token}
 }
 
 
-export const findUser = async(_id)=>{
-
-    const user = await User.findById({_id});
-
-    if(user.phone){
-       user.phone = decrypt(user.phone)
-    }
-    return user
-}

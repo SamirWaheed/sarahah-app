@@ -13,3 +13,7 @@ export const encryption ={
     ENCRYPTION_KEY : process.env.ENC_KEY,
     IV_LENGTH : process.env.ENC_IV_LENGTH
 }
+
+export const authN = {
+    AUTH_KEY :process.env.TOKEN_SECRET
+}

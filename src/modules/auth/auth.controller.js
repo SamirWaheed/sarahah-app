@@ -1,5 +1,6 @@
 import express from "express"
 import * as authService from  './auth.service.js';
+import { authMiddleware } from "../../middlewares/index.js"; 
 
 const authRouter = express();
 
@@ -10,14 +11,11 @@ authRouter.post('/signup',async(req,res,next)=>{
 
 authRouter.post('/login',async(req,res,next)=>{
 
+
     const result = await authService.login(req.body);
-    return res.status(201).json("login Successfully",result)
+    return res.status(200).json({message:"login Successfully",token:result.token,user: result.user})
 });
 
 
-authRouter.get('/info/:userId',async(req,res,next)=>{
 
-    const result = await authService.findUser(req.params.userId);
-    return res.status(200).json(result)
-});
 export default authRouter

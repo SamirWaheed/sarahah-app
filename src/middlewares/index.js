@@ -1,1 +1,2 @@
-export {default as errorHandler} from './error/error.js'
+export {default as errorHandler} from './error.middlewares.js'
+export * as authMiddleware from './auth.middlewares.js'

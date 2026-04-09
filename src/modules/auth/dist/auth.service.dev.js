@@ -5,7 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.login = exports.signUp = void 0;
 
-var _index = require("../../database/models/index.js");
+var _indexRepo = require("../../database/repository/index.repo.js");
 
 var _utilsIndex = require("../../utils/utils.index.js");
 
@@ -21,11 +21,10 @@ var signUp = function signUp(body) {
         case 0:
           firstName = body.firstName, lastName = body.lastName, email = body.email, password = body.password, gender = body.gender, role = body.role, phone = body.phone;
           _context.next = 3;
-          return regeneratorRuntime.awrap(_index.User.findOne({
+          return regeneratorRuntime.awrap(_indexRepo.userRepository.findByEmail({
             email: email
           }, {
-            email: 1,
-            _id: 0
+            email: 1
           }));
 
         case 3:
@@ -62,7 +61,7 @@ var signUp = function signUp(body) {
           }
 
           _context.next = 13;
-          return regeneratorRuntime.awrap(_index.User.create(user));
+          return regeneratorRuntime.awrap(_indexRepo.userRepository.createDocument(user));
 
         case 13:
           newUser = _context.sent;
@@ -87,15 +86,20 @@ var login = function login(body) {
         case 0:
           email = body.email, password = body.password;
           _context2.next = 3;
-          return regeneratorRuntime.awrap(_index.User.findOne({
+          return regeneratorRuntime.awrap(_indexRepo.userRepository.findByEmail({
             email: email
-          }).select("+password"));
+          }, {
+            password: 1,
+            email: 1
+          }));
 
         case 3:
           user = _context2.sent;
+          console.log(user.email);
+          console.log(user.password);
 
           if (user) {
-            _context2.next = 6;
+            _context2.next = 8;
             break;
           }
 
@@ -105,15 +109,15 @@ var login = function login(body) {
             }
           });
 
-        case 6:
-          _context2.next = 8;
+        case 8:
+          _context2.next = 10;
           return regeneratorRuntime.awrap(_utilsIndex.hashingMethods.verifyPassword(user.password, password));
 
-        case 8:
+        case 10:
           verify = _context2.sent;
 
           if (verify) {
-            _context2.next = 11;
+            _context2.next = 13;
             break;
           }
 
@@ -123,7 +127,7 @@ var login = function login(body) {
             }
           });
 
-        case 11:
+        case 13:
           payload = {
             id: user._id,
             role: user.role
@@ -135,7 +139,7 @@ var login = function login(body) {
             token: token
           });
 
-        case 15:
+        case 17:
         case "end":
           return _context2.stop();
       }

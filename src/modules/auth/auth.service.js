@@ -1,6 +1,4 @@
-import {
-    User
-} from "../../database/models/index.js";
+import { userRepository } from "../../database/repository/index.repo.js";
 
 import { encryptionMethods ,hashingMethods,jwtMethods} from "../../utils/utils.index.js";
 
@@ -18,13 +16,7 @@ export const signUp = async (body) => {
     } = body;
 
 
-    
-    const checkEmail = await User.findOne({
-        email
-    }, {
-        email: 1,
-        _id: 0
-    });
+    const checkEmail = await userRepository.findByEmail({email},{email:1});
 
     if (checkEmail) {
         throw new Error("Email Already Exist", {
@@ -48,15 +40,16 @@ export const signUp = async (body) => {
     if(phone){
         user.phone = encryptionMethods.encrypt(phone)
     }
-    const newUser = await User.create(user);
+    const newUser = await userRepository.createDocument(user);
     return newUser
 };
 
 export const login = async (body)=>{
     const {email,password} = body;
 
-    const user = await User.findOne({email}).select("+password");
-
+    const user = await userRepository.findByEmail({email},{password:1,email:1});
+    console.log(user.email)
+    console.log(user.password)
     if(!user){
         throw new Error("Email not Found", {
             cause: {

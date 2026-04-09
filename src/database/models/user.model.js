@@ -84,11 +84,16 @@ const userSchema = new mongoose.Schema({
         virtuals: true
     }
 }
-)
+)                                                                                                                         
 userSchema.virtual("fullName").get(function(){
     return this.firstName + " " + this.lastName
 })
 
+userSchema.virtual("Messages",{
+    ref:"Message",
+    localField: "_id",
+    foreignField:"receiver"
+})
 userSchema.pre('/^find/',function(next){
     this.where({isDeleted:false});
     next()

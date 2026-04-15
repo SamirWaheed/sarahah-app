@@ -120,7 +120,8 @@ export async function hardDeleteAccount(_id) {
 
     return deletedAccount 
 }
-// populate user with messages
+
+
 export async function getUserWithMessages(_id) {
     const userWithMessages = await userRepository.findByIdWithMessages(_id);    
     if (!userWithMessages) {

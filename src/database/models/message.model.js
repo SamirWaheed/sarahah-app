@@ -1,5 +1,5 @@
 
-import mongoose, { Schema } from 'mongoose';
+import mongoose, {Schema} from 'mongoose';
 
 const messageSchema = new mongoose.Schema({
     content: {
@@ -44,5 +44,6 @@ messageSchema.pre('/^find/',function(next){
     this.where({isDeleted:false});
     next()
 })
+
 const Message = mongoose.model('Message', messageSchema);
 export default Message;

@@ -3,7 +3,9 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.login = exports.signUp = void 0;
+exports.refreshToken = exports.login = exports.signUp = void 0;
+
+var _envConfig = require("../../config/env.config.js");
 
 var _indexRepo = require("../../database/repository/index.repo.js");
 
@@ -78,7 +80,7 @@ var signUp = function signUp(body) {
 exports.signUp = signUp;
 
 var login = function login(body) {
-  var email, password, user, verify, payload, token, _user$toObject, hashedPass, safeUser;
+  var email, password, user, verify, payload, _jwtMethods$generateL, accessToken, refreshToken, _user$toObject, hashedPass, safeUser;
 
   return regeneratorRuntime.async(function login$(_context2) {
     while (1) {
@@ -90,7 +92,8 @@ var login = function login(body) {
             email: email
           }, {
             password: 1,
-            email: 1
+            email: 1,
+            role: 1
           }));
 
         case 3:
@@ -130,13 +133,25 @@ var login = function login(body) {
         case 13:
           payload = {
             id: user._id,
-            role: user.role
+            role: user.role,
+            email: user.email
           };
-          token = _utilsIndex.jwtMethods.generateToken(payload);
+          _jwtMethods$generateL = _utilsIndex.jwtMethods.generateLoginCredentials({
+            payload: payload,
+            options: {
+              accessOptions: {
+                expiresIn: _envConfig.jwtConfig[user.role].accessExpirationTime
+              },
+              refreshOptions: {
+                expiresIn: _envConfig.jwtConfig[user.role].refreshExpirationTime
+              }
+            }
+          }), accessToken = _jwtMethods$generateL.accessToken, refreshToken = _jwtMethods$generateL.refreshToken;
           _user$toObject = user.toObject(), hashedPass = _user$toObject.password, safeUser = _objectWithoutProperties(_user$toObject, ["password"]);
           return _context2.abrupt("return", {
-            user: safeUser,
-            token: token
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            user: safeUser
           });
 
         case 17:
@@ -148,3 +163,43 @@ var login = function login(body) {
 };
 
 exports.login = login;
+
+var refreshToken = function refreshToken(header) {
+  var refreshToken, _jwtMethods$authentic, decoded, payload, _jwtMethods$generateL2, accessToken;
+
+  return regeneratorRuntime.async(function refreshToken$(_context3) {
+    while (1) {
+      switch (_context3.prev = _context3.next) {
+        case 0:
+          refreshToken = header.authorization;
+          _jwtMethods$authentic = _utilsIndex.jwtMethods.authenticateToken({
+            token: refreshToken,
+            tokenType: _utilsIndex.Token_Type.Refresh
+          }), decoded = _jwtMethods$authentic.decoded;
+          payload = {
+            id: decoded.id,
+            role: decoded.role,
+            email: decoded.email
+          };
+          _jwtMethods$generateL2 = _utilsIndex.jwtMethods.generateLoginCredentials({
+            payload: payload,
+            options: {
+              accessOptions: {
+                expiresIn: _envConfig.jwtConfig[decoded.role].accessExpirationTime
+              }
+            },
+            requiredToken: _utilsIndex.Token_Type.Access
+          }), accessToken = _jwtMethods$generateL2.accessToken;
+          return _context3.abrupt("return", {
+            accessToken: accessToken
+          });
+
+        case 5:
+        case "end":
+          return _context3.stop();
+      }
+    }
+  });
+};
+
+exports.refreshToken = refreshToken;

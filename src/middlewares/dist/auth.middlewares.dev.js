@@ -3,13 +3,12 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.authenticate = void 0;
+exports.authorize = exports.authenticate = void 0;
 
 var _utilsIndex = require("../utils/utils.index.js");
 
 var authenticate = function authenticate(req, res, next) {
   var authHeader = req.headers.authorization;
-  console.log(authHeader);
 
   if (!authHeader) {
     throw new Error("Token required", {
@@ -20,7 +19,6 @@ var authenticate = function authenticate(req, res, next) {
   }
 
   var token = authHeader.split(" ")[1];
-  console.log(token);
 
   if (!token) {
     throw new Error("Invalid Or Expired Token", {
@@ -30,10 +28,28 @@ var authenticate = function authenticate(req, res, next) {
     });
   }
 
-  var decoded = _utilsIndex.jwtMethods.verifyToken(token);
+  var data = _utilsIndex.jwtMethods.authenticateToken(token, _utilsIndex.Token_Type.Access);
 
-  req.user = decoded;
+  req.user = data;
   next();
 };
 
 exports.authenticate = authenticate;
+
+var authorize = function authorize(roles) {
+  return function (req, res, next) {
+    var userRole = req.user.role;
+
+    if (!roles.includes(userRole)) {
+      throw new Error("Unauthorized Access", {
+        cause: {
+          status: 403
+        }
+      });
+    }
+
+    next();
+  };
+};
+
+exports.authorize = authorize;

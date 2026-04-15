@@ -1,21 +1,45 @@
-import { jwtMethods } from "../utils/utils.index.js";
+import {
+    jwtMethods,
+    Token_Type
+} from "../utils/utils.index.js";
 
 
-export const authenticate = (req,res,next)=>{
+export const authenticate = (req, res, next) => {
+
     const authHeader = req.headers.authorization;
-    
-    console.log(authHeader)
-     if(!authHeader){
-        throw new Error ("Token required",{cause:{status:401}});
+
+    if (!authHeader) {
+        throw new Error("Token required", {
+            cause: {
+                status: 401
+            }
+        });
     }
     const token = authHeader.split(" ")[1];
-    
-    console.log(token)
-    if(!token){
-        throw new Error ("Invalid Or Expired Token",{cause:{status:401}});
+    if (!token) {
+        throw new Error("Invalid Or Expired Token", {
+            cause: {
+                status: 401
+            }
+        });
     }
 
-    const decoded = jwtMethods.verifyToken(token);
-    req.user = decoded 
+    const data = jwtMethods.authenticateToken(token, Token_Type.Access)
+;
+    req.user =data;
     next()
+}
+
+export const authorize = (roles) => {
+    return (req, res, next) => {
+        const userRole = req.user.role;
+        if (!roles.includes(userRole)) {
+            throw new Error("Unauthorized Access", {
+                cause: {
+                    status: 403
+                }
+            });
+        }
+        next()
+    }
 }

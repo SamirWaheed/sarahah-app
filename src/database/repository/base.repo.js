@@ -17,7 +17,7 @@
      async findAll(filter, select = {}) {
          return await this._model.find(filter).select(select);
      }
-     async updateDocument(id, data, options = {
+     async findAndUpdateDocument(id, data, options = {
          new: true
      }) {
          return await this._model.findByIdAndUpdate(id, data, options);

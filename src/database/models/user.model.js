@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-import { User_Role, Gender,Status } from "../../utils/utils.index.js";
+import { User_Role, Gender,Status,Provider_Type } from "../../utils/utils.index.js";
 
 const userSchema = new mongoose.Schema({
     firstName:{
@@ -50,21 +50,35 @@ const userSchema = new mongoose.Schema({
     },
     phone:{
         type:String,
-        required:true,
+       
     },
     gender:{
-        required: true,
+        
         type:String,
         enum:Object.values(Gender),
     
     },
     role:{
         type:String,
-        enum:Object.values(User_Role)
+        enum:Object.values(User_Role),
+        default: User_Role.User
     },
     status:{
         type:String,
         enum:Object.values(Status)
+    },
+    googleId:{
+        type:String,
+
+        index:{
+            unique: true,
+            name:"googleId_index"
+        }
+    },
+    provider:{
+        type: String,
+        enum: Object.values(Provider_Type),
+        default: Provider_Type.Local
     },
     isDeleted:{
         type: Boolean,

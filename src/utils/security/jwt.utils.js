@@ -3,7 +3,9 @@ import {
     jwtConfig
 } from '../../config/env.config.js';
 import {
-    User_Role, Token_Type
+    User_Role,
+    Token_Type,
+    stringServices
 } from '../utils.index.js';
 
 
@@ -29,49 +31,45 @@ export const decodeToken = (token) => {
 }
 
 
-export const authenticateToken = (token, tokenType) => {
-
-        const decodedData = decodeToken(token);
-        
-        if (!decodedData) {
-        throw new Error("Invalid Or Expired Token", {
-            cause: {
-                status: 401
-            }
-        });
+export const  authenticateToken = async(token, tokenType) => {
+    
+    const data = decodeToken(token);
+    
+    if (!data) {
+       throw new Error("Invalid Or Expired Token",{cause:{statusCode:401}})
     }
-
-    const signature = detectSignatureByTypeAndRole({
-        role: decodedData.role,
-        tokenType
-    });
-    if (!signature) {
-        throw new Error("Invalid Signature", {
-            cause: {
-                status: 403
-            }
-        });
+ 
+    const {tokenSignature} = detectSignatureByTypeAndRole({  role:data.role,tokenTypes:tokenType});
+   
+    if (!tokenSignature) {
+      
+          throw new Error("Invalid Signature",{cause:{statusCode:403}})
 
     }
- const decoded = verifyToken({
-        token,
-        secret: signature
-    });
+    
+    const decodedData = verifyToken({token,secret:tokenSignature});
 
-    if (!decoded) {
-        throw new Error("Invalid Or Expired Token", {
-            cause: {
-                status: 401
-            }
-        });
+    if (!decodedData) {
+     
+         throw new Error("Invalid Or Expired Token",{cause:{statusCode:401}})
+
+    }
+    
+    const isBlacklisted = await stringServices.getKey({key:`Blacklist:${tokenType}:${decodedData.jti}`})
+    console.log(isBlacklisted)
+    if(isBlacklisted){
+        throw new Error("Token has been blacklisted",{cause:{statusCode:401}})
+    }
+   
+    return {decodedData}
 
 }
 
-    return {decoded}
-
-}
-
-export const generateLoginCredentials = ({ payload, options,requiredToken}) => {
+export const generateLoginCredentials = ({
+    payload,
+    options,
+    requiredToken
+}) => {
 
     const signature = detectSignatureByTypeAndRole({
         role: payload.role,
@@ -87,6 +85,7 @@ export const generateLoginCredentials = ({ payload, options,requiredToken}) => {
                 secret: signature.accessSignature,
                 options: options.accessOptions
             });
+            break;
 
         case Token_Type.Refresh:
             refreshToken = generateToken({
@@ -95,22 +94,26 @@ export const generateLoginCredentials = ({ payload, options,requiredToken}) => {
                 options: options.refreshOptions
             });
             break;
-    
-        default:
-             accessToken = generateToken({
-        payload,
-        secret: signature.accessSignature,
-        options :options.accessOptions
 
-    });
-     refreshToken = generateToken({
-        payload,
-        secret: signature.refreshSignature,
-        options:options.refreshOptions
-    });
-        break;
+        default:
+            accessToken = generateToken({
+                payload,
+                secret: signature.accessSignature,
+                options: options.accessOptions
+
+            });
+            refreshToken = generateToken({
+                payload,
+                secret: signature.refreshSignature,
+                options: options.refreshOptions
+            });
+            
+           
     }
-    return {accessToken,refreshToken}
+    return {
+        accessToken,
+        refreshToken
+    }
 }
 
 export const detectSecretByRole = ({
@@ -119,7 +122,7 @@ export const detectSecretByRole = ({
     let signature;
     switch (role) {
         case User_Role.Admin:
-            signature = jwtConfig.admin;
+            signature =jwtConfig.admin ;
             break;
         case User_Role.User:
             signature = jwtConfig.user;
@@ -140,7 +143,7 @@ export const detectSignatureByTypeAndRole = ({
     const signatures = detectSecretByRole({
         role
     });
-    console.log(signatures)
+   
     let tokenSignature;
 
     if (both) {
@@ -155,11 +158,8 @@ export const detectSignatureByTypeAndRole = ({
             tokenSignature = signatures.refreshSignature;
             break;
         default:
-            throw new Error("Invalid Token Type", {
-                cause: {
-                    status: 400
-                }
-            })
+            throw new Error("Invalid Token Type",{cause:{statusCode:400}})
     }
-    return tokenSignature;
+    
+    return {tokenSignature};
 }

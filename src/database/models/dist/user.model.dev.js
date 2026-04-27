@@ -55,21 +55,32 @@ var userSchema = new _mongoose["default"].Schema({
     select: false
   },
   phone: {
-    type: String,
-    required: true
+    type: String
   },
   gender: {
-    required: true,
     type: String,
     "enum": Object.values(_utilsIndex.Gender)
   },
   role: {
     type: String,
-    "enum": Object.values(_utilsIndex.User_Role)
+    "enum": Object.values(_utilsIndex.User_Role),
+    "default": _utilsIndex.User_Role.User
   },
   status: {
     type: String,
     "enum": Object.values(_utilsIndex.Status)
+  },
+  googleId: {
+    type: String,
+    index: {
+      unique: true,
+      name: "googleId_index"
+    }
+  },
+  provider: {
+    type: String,
+    "enum": Object.values(_utilsIndex.Provider_Type),
+    "default": _utilsIndex.Provider_Type.Local
   },
   isDeleted: {
     type: Boolean,

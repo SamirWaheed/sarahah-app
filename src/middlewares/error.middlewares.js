@@ -1,9 +1,17 @@
-export default  function errorHandler (err,req,res,next){
-    console.log(err);
+ const errorHandler = (err, req, res, next) => {
+    console.error("FULL ERROR:", err);
+    console.error("STACK:", err?.stack);
 
-    res.status(err?.cause?.status|| 500).json({
-        message:err.message ?? "Internal Server Error",
-        success: false
-    })
+    // err itself might be undefined
+    const statusCode = err?.statusCode ?? err?.cause?.statusCode ?? 500;
+    const message = err?.message || "Internal Server Error";
 
-}
+    return res.status(statusCode).json({
+        success: false,
+        statusCode,
+        message,
+        data: null,
+    });
+};
+
+export default errorHandler;

@@ -8,30 +8,54 @@ exports.authorize = exports.authenticate = void 0;
 var _utilsIndex = require("../utils/utils.index.js");
 
 var authenticate = function authenticate(req, res, next) {
-  var authHeader = req.headers.authorization;
+  var authHeader, token, _ref, decodedData;
 
-  if (!authHeader) {
-    throw new Error("Token required", {
-      cause: {
-        status: 401
+  return regeneratorRuntime.async(function authenticate$(_context) {
+    while (1) {
+      switch (_context.prev = _context.next) {
+        case 0:
+          authHeader = req.headers.authorization;
+
+          if (authHeader) {
+            _context.next = 3;
+            break;
+          }
+
+          throw new Error({
+            message: "Token required",
+            statusCode: 401
+          });
+
+        case 3:
+          token = authHeader.split(" ")[1];
+
+          if (token) {
+            _context.next = 6;
+            break;
+          }
+
+          throw new Error("Invalid Or Expired Token", {
+            cause: {
+              statusCode: 401
+            }
+          });
+
+        case 6:
+          _context.next = 8;
+          return regeneratorRuntime.awrap(_utilsIndex.jwtMethods.authenticateToken(token, _utilsIndex.Token_Type.Access));
+
+        case 8:
+          _ref = _context.sent;
+          decodedData = _ref.decodedData;
+          req.user = decodedData;
+          next();
+
+        case 12:
+        case "end":
+          return _context.stop();
       }
-    });
-  }
-
-  var token = authHeader.split(" ")[1];
-
-  if (!token) {
-    throw new Error("Invalid Or Expired Token", {
-      cause: {
-        status: 401
-      }
-    });
-  }
-
-  var data = _utilsIndex.jwtMethods.authenticateToken(token, _utilsIndex.Token_Type.Access);
-
-  req.user = data;
-  next();
+    }
+  });
 };
 
 exports.authenticate = authenticate;
@@ -43,7 +67,7 @@ var authorize = function authorize(roles) {
     if (!roles.includes(userRole)) {
       throw new Error("Unauthorized Access", {
         cause: {
-          status: 403
+          statusCode: 403
         }
       });
     }

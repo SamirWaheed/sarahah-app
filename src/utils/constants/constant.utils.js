@@ -16,3 +16,9 @@ export const Token_Type = {
     Access:"access",
     Refresh:"refresh"
 }
+
+export const Provider_Type = {
+    Google:"google",
+    Facebook:"facebook",
+    Local:"local"
+}

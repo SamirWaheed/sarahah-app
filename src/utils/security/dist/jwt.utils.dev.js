@@ -37,45 +37,91 @@ var decodeToken = function decodeToken(token) {
 exports.decodeToken = decodeToken;
 
 var authenticateToken = function authenticateToken(token, tokenType) {
-  var decodedData = decodeToken(token);
+  var data, _detectSignatureByTyp, tokenSignature, decodedData, isBlacklisted;
 
-  if (!decodedData) {
-    throw new Error("Invalid Or Expired Token", {
-      cause: {
-        status: 401
+  return regeneratorRuntime.async(function authenticateToken$(_context) {
+    while (1) {
+      switch (_context.prev = _context.next) {
+        case 0:
+          data = decodeToken(token);
+
+          if (data) {
+            _context.next = 3;
+            break;
+          }
+
+          throw new Error("Invalid Or Expired Token", {
+            cause: {
+              statusCode: 401
+            }
+          });
+
+        case 3:
+          _detectSignatureByTyp = detectSignatureByTypeAndRole({
+            role: data.role,
+            tokenTypes: tokenType
+          }), tokenSignature = _detectSignatureByTyp.tokenSignature;
+
+          if (tokenSignature) {
+            _context.next = 6;
+            break;
+          }
+
+          throw new Error("Invalid Signature", {
+            cause: {
+              statusCode: 403
+            }
+          });
+
+        case 6:
+          decodedData = verifyToken({
+            token: token,
+            secret: tokenSignature
+          });
+
+          if (decodedData) {
+            _context.next = 9;
+            break;
+          }
+
+          throw new Error("Invalid Or Expired Token", {
+            cause: {
+              statusCode: 401
+            }
+          });
+
+        case 9:
+          _context.next = 11;
+          return regeneratorRuntime.awrap(_utilsIndex.stringServices.getKey({
+            key: "Blacklist:".concat(tokenType, ":").concat(decodedData.jti)
+          }));
+
+        case 11:
+          isBlacklisted = _context.sent;
+          console.log(isBlacklisted);
+
+          if (!isBlacklisted) {
+            _context.next = 15;
+            break;
+          }
+
+          throw new Error("Token has been blacklisted", {
+            cause: {
+              statusCode: 401
+            }
+          });
+
+        case 15:
+          return _context.abrupt("return", {
+            decodedData: decodedData
+          });
+
+        case 16:
+        case "end":
+          return _context.stop();
       }
-    });
-  }
-
-  var signature = detectSignatureByTypeAndRole({
-    role: decodedData.role,
-    tokenType: tokenType
+    }
   });
-
-  if (!signature) {
-    throw new Error("Invalid Signature", {
-      cause: {
-        status: 403
-      }
-    });
-  }
-
-  var decoded = verifyToken({
-    token: token,
-    secret: signature
-  });
-
-  if (!decoded) {
-    throw new Error("Invalid Or Expired Token", {
-      cause: {
-        status: 401
-      }
-    });
-  }
-
-  return {
-    decoded: decoded
-  };
 };
 
 exports.authenticateToken = authenticateToken;
@@ -97,6 +143,7 @@ var generateLoginCredentials = function generateLoginCredentials(_ref3) {
         secret: signature.accessSignature,
         options: options.accessOptions
       });
+      break;
 
     case _utilsIndex.Token_Type.Refresh:
       refreshToken = generateToken({
@@ -117,7 +164,6 @@ var generateLoginCredentials = function generateLoginCredentials(_ref3) {
         secret: signature.refreshSignature,
         options: options.refreshOptions
       });
-      break;
   }
 
   return {
@@ -158,7 +204,6 @@ var detectSignatureByTypeAndRole = function detectSignatureByTypeAndRole(_ref5) 
   var signatures = detectSecretByRole({
     role: role
   });
-  console.log(signatures);
   var tokenSignature;
 
   if (both) {
@@ -177,12 +222,14 @@ var detectSignatureByTypeAndRole = function detectSignatureByTypeAndRole(_ref5) 
     default:
       throw new Error("Invalid Token Type", {
         cause: {
-          status: 400
+          statusCode: 400
         }
       });
   }
 
-  return tokenSignature;
+  return {
+    tokenSignature: tokenSignature
+  };
 };
 
 exports.detectSignatureByTypeAndRole = detectSignatureByTypeAndRole;

@@ -43,7 +43,7 @@ export const updateUser = async (_id, body) => {
     if (!user) {
         throw new Error('User not found', {
             cause: {
-                status: 404
+                statusCode: 404
             }
         });
     }
@@ -54,7 +54,7 @@ export const updateUser = async (_id, body) => {
         if (emailConflict) {
             throw new Error('Email already in use', {
                 cause: {
-                    status: 409
+                    statusCode: 409
                 }
             });
         }
@@ -72,7 +72,7 @@ export const updateUser = async (_id, body) => {
 
     }
 
-    const updatedUser = await userRepository.updateDocument(_id, updatedData, {
+    const updatedUser = await userRepository.findAndUpdateDocument(_id, updatedData, {
         new: true,
         runValidators: true
     });
@@ -86,7 +86,7 @@ export async function softDeleteUser(_id) {
     if (!deletedUser) {
         throw new Error('User not found', {
             cause: {
-                status: 404
+                statusCode: 404
             }
         });
     }
@@ -99,7 +99,7 @@ export async function restoreDeletedUser(_id) {
     if (!user) {
         throw new Error('User not found', {
             cause: {
-                status: 404
+                statusCode: 404
             }
         });
     }
@@ -112,7 +112,7 @@ export async function hardDeleteAccount(_id) {
     if (!deletedAccount) {
         throw new Error('User not found', {
             cause: {
-                status: 404
+                statusCode: 404
             }
         });
 
@@ -127,7 +127,7 @@ export async function getUserWithMessages(_id) {
     if (!userWithMessages) {
         throw new Error('User not found', {
             cause: {
-                status: 404
+                statusCode: 404
             }
         });
         

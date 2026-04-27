@@ -110,11 +110,11 @@ function () {
       }, null, this);
     }
   }, {
-    key: "updateDocument",
-    value: function updateDocument(id, data) {
+    key: "findAndUpdateDocument",
+    value: function findAndUpdateDocument(id, data) {
       var options,
           _args5 = arguments;
-      return regeneratorRuntime.async(function updateDocument$(_context5) {
+      return regeneratorRuntime.async(function findAndUpdateDocument$(_context5) {
         while (1) {
           switch (_context5.prev = _context5.next) {
             case 0:

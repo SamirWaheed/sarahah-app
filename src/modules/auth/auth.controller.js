@@ -1,26 +1,42 @@
 import express from "express"
 import * as authService from  './auth.service.js';
+import {unifiedResponse,authMiddleware} from "../../middlewares/index.js";
 
-
+const {authenticate} = authMiddleware;
 const authRouter = express();
 
-authRouter.post('/signup',async(req,res,next)=>{
-    console.log(req)
+authRouter.post('/signup',unifiedResponse(
+    async(req,res)=>{
+    
     const result = await authService.signUp(req.body);
-    return res.status(201).json(result)
-});
+    return ({message:"User Created Successfully", data:result, meta:{statusCode:201}})
+}));
 
-authRouter.post('/login',async(req,res,next)=>{
-    const {accessToken, refreshToken, user} = await authService.login(req.body);
-    return res.status(200).json({message:"login Successfully", token: accessToken, refreshToken, user})
-});
+authRouter.post('/login',unifiedResponse(
+    async(req,res)=>{
+    const {tokens} = await authService.login(req.body);
+    return ({message:"login Successfully", data:tokens,meta:{statusCode:200}})
+}));
 
-authRouter.post('/refresh',async(req,res,next)=>{
+authRouter.post('/refresh',unifiedResponse(async(req,res,next)=>{
     
     const result = await authService.refreshToken(req.headers);
-    return res.status(200).json(result)
-});
+    return ({message:"Token Refreshed Successfully", data:result})
+}));
 
+authRouter.post("/gmail/register",unifiedResponse(async(req,res,next)=>{
+    const result = await authService.gmailSignUp(req.body);
+    return ({message:"User Created Successfully", data:result, meta:{statusCode:201}})
+}));
 
+authRouter.post("/gmail/login",unifiedResponse(async(req,res,next)=>{
+    const result = await authService.gmailLogin(req.body);
+    return ({message:"login Successfully", data:result})
+}));
+
+authRouter.post("/logout",authenticate,unifiedResponse(async(req,res,next)=>{
+  
+    const result = await authService.logout(req.user, req.headers.refreshtoken);
+    return ({message:"Logout Successfully", data:result,meta:{statusCode:200}}) }));
 
 export default authRouter

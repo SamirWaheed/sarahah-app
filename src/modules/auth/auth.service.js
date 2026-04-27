@@ -1,15 +1,79 @@
-import {jwtConfig} from "../../config/env.config.js";
+import {
+    jwtConfig,
+    gcpConfig
+} from "../../config/index.js";
 import {
     userRepository
 } from "../../database/repository/index.repo.js";
 
-import {
-    encryptionMethods,
-    hashingMethods,
-    jwtMethods,
-    Token_Type
-} from "../../utils/utils.index.js";
+import crypto,{randomUUID} from "crypto";
+import { authenticateToken } from "../../utils/security/jwt.utils.js";
+import { encryptionMethods,hashingMethods, jwtMethods,Token_Type,Provider_Type,blacklistTokens } from "../../utils/utils.index.js";
 
+import {OAuth2Client} from 'google-auth-library';
+
+const client = new OAuth2Client();
+
+const buildTokens = (data)=>{
+        const payload = {
+        id: data._id,
+        role: data.role,
+        email: data.email
+    }
+     const {accessToken, refreshToken} = jwtMethods.generateLoginCredentials({
+        payload: payload,
+        options: {
+            accessOptions: {
+                expiresIn: jwtConfig[data.role].accessExpirationTimeSec,
+                jwtid: randomUUID()
+            },
+            refreshOptions: {
+                expiresIn: jwtConfig[data.role].refreshExpirationTimeSec,
+                jwtid: randomUUID()
+            }
+
+        }
+    });
+    return {accessToken,refreshToken}
+
+    }
+
+
+const verifyGoogleToken = async (token) => {
+
+    const ticket = await client.verifyIdToken({
+        idToken: token,
+        audience: gcpConfig.webClientId
+    });
+    return ticket.getPayload();
+}
+
+const createOrUpdateGoogleUser = async(user,payload)=>{
+        const {given_name,family_name,email,sub} = payload;
+         if (user) {
+       return await userRepository.findAndUpdateDocument({
+            _id: user._id,
+            data: {
+                firstName: given_name,
+                lastName: family_name,
+                email: email
+            },
+            options: {
+                new: true
+            }
+        })
+    }
+    else {
+        return await userRepository.createDocument({
+            email: email,
+            firstName: given_name,
+            lastName: family_name,
+            provider:Provider_Type.Google,
+            googleId: sub,
+            password :await hashingMethods.hashingPassword(crypto.randomBytes(12).toString("hex"))
+        })
+    }
+    }
 
 export const signUp = async (body) => {
 
@@ -33,7 +97,7 @@ export const signUp = async (body) => {
     if (checkEmail) {
         throw new Error("Email Already Exist", {
             cause: {
-                status: 409
+                statuscode: 409
             }
         })
     }
@@ -69,12 +133,10 @@ export const login = async (body) => {
         email: 1,
         role: 1
     });
-    console.log(user.email)
-    console.log(user.password)
     if (!user) {
         throw new Error("Email not Found", {
             cause: {
-                status: 404
+                statusCode: 404
             }
         })
 
@@ -86,48 +148,36 @@ export const login = async (body) => {
     if (!verify) {
         throw new Error("Invalid Password", {
             cause: {
-                status: 409
+                statusCode: 409
             }
         })
     }
 
-    const payload = {
-        id: user._id,
-        role: user.role,
-        email: user.email
-    }
+    const {accessToken,refreshToken} = buildTokens(user)
 
-    const {accessToken, refreshToken} = jwtMethods.generateLoginCredentials({
-        payload: payload,
-
-        options: {
-            accessOptions: {
-                expiresIn: jwtConfig[user.role].accessExpirationTime
-            },
-            refreshOptions: {
-                expiresIn: jwtConfig[user.role].refreshExpirationTime
-            }
-
-        }
-    })
-    
-   
     const {
         password: hashedPass,
         ...safeUser
     } = user.toObject();
     return {
-         accessToken,
-        refreshToken,
+        tokens:{accessToken,
+        refreshToken},
 
         user: safeUser
     }
 }
 
-export const refreshToken = async(header)=>{
+export const refreshToken = async (header) => {
 
-    const {authorization:refreshToken} = header;
-    const {decoded} =jwtMethods.authenticateToken({token:refreshToken,tokenType:Token_Type.Refresh});
+    const {
+        authorization: refreshToken
+    } = header;
+    const {
+        decoded
+    } = jwtMethods.authenticateToken({
+        token: refreshToken,
+        tokenType: Token_Type.Refresh
+    });
 
     const payload = {
         id: decoded.id,
@@ -135,7 +185,9 @@ export const refreshToken = async(header)=>{
         email: decoded.email
     }
 
-    const {accessToken} = jwtMethods.generateLoginCredentials({
+    const {
+        accessToken
+    } = jwtMethods.generateLoginCredentials({
         payload: payload,
         options: {
             accessOptions: {
@@ -146,5 +198,83 @@ export const refreshToken = async(header)=>{
 
     });
 
-        return {accessToken}
+    return {
+        accessToken
+    }
+}
+
+
+export const gmailSignUp = async (body) => {
+
+    let {
+        idToken
+    } = body;
+
+
+    const payload = await verifyGoogleToken(idToken);
+   
+    if (!payload || !payload.email_verified) {
+        throw new Error("Invalid Email ", {
+            cause: {
+                statusCode: 401
+            }
+        })
+    }
+    const user = await userRepository.findOne({
+        $or: [{
+            email: payload.email,
+            googleId: payload.sub
+        }],
+        provider: Provider_Type.Google
+    });
+
+    const userdata = await createOrUpdateGoogleUser({user,payload})
+
+    return buildTokens(userData)
+}
+
+export const gmailLogin = async (body) => {
+    const {idToken} = body;
+    const payload = await verifyGoogleToken(idToken);
+    if (!payload || !payload.email_verified) {
+        throw new Error("Invalid Email ", {
+            cause: {
+                statusCode: 401
+            }
+        })
+    }
+
+     const user = await userRepository.findOne({
+        $or: [{
+            email: payload.email,
+            googleId: payload.sub
+        }],
+        provider: Provider_Type.Google
+    });
+ if (!user) {
+        throw new Error("User Not found ", {
+            cause: {
+                statusCode: 404
+            }
+        })
+    }
+return buildTokens(user)
+}
+
+
+export const logout = async (accessTokenData,refreshToken)=>{
+
+    
+    const {decodedData:refreshTokenData} = await authenticateToken(refreshToken,Token_Type.Refresh);
+    const {exp:refreshExpiration,jti:refreshTokenId} = refreshTokenData;
+     const {exp:accessExpiration,jti:accessTokenId} = accessTokenData;
+   
+        
+    Promise.all([
+        blacklistTokens(`Blacklist:${Token_Type.Refresh}:${refreshTokenId}`,refreshExpiration),
+        blacklistTokens(`Blacklist:${Token_Type.Access}:${accessTokenId}`,accessExpiration)
+    ])
+
+    
+    return  true
 }

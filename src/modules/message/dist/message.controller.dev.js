@@ -21,7 +21,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "d
 
 var messageRouter = (0, _express["default"])();
 var authenticate = _index.authMiddleware.authenticate;
-messageRouter.post('/new-message', authenticate, function _callee(req, res, next) {
+messageRouter.post('/new-message', authenticate, (0, _index.unifiedResponse)(function _callee(req, res, next) {
   var userId, message;
   return regeneratorRuntime.async(function _callee$(_context) {
     while (1) {
@@ -33,10 +33,13 @@ messageRouter.post('/new-message', authenticate, function _callee(req, res, next
 
         case 3:
           message = _context.sent;
-          return _context.abrupt("return", res.status(201).json({
+          return _context.abrupt("return", {
             Message: " Create message Successfully",
-            message: message
-          }));
+            data: message,
+            meta: {
+              statusCode: 201
+            }
+          });
 
         case 5:
         case "end":
@@ -44,6 +47,6 @@ messageRouter.post('/new-message', authenticate, function _callee(req, res, next
       }
     }
   });
-});
+}));
 var _default = messageRouter;
 exports["default"] = _default;

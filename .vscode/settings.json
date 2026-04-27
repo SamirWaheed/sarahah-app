@@ -1,6 +1,15 @@
 {
     "compile-hero.disable-compile-files-on-did-save-code": false,
     "github.copilot.enable": {
+        "*": false,
+        "plaintext": false,
+        "markdown": false,
+        "scminput": false,
+        "javascript": false,
+        "json": false,
         "javascrypt": true
-    }
+    },
+    "cSpell.words": [
+        "refreshtoken"
+    ]
 }

@@ -82,6 +82,29 @@ var userSchema = new _mongoose["default"].Schema({
     "enum": Object.values(_utilsIndex.Provider_Type),
     "default": _utilsIndex.Provider_Type.Local
   },
+  isEmailVerified: {
+    type: Boolean,
+    "default": false
+  },
+  OTPs: [{
+    value: {
+      type: String,
+      required: true
+    },
+    expireAt: {
+      type: Date,
+      "default": Date.now() + 5 * 60 * 1000
+    },
+    channel: {
+      type: String,
+      "enum": Object.values(_utilsIndex.Channels),
+      "default": _utilsIndex.Channels.Email
+    },
+    createdAt: {
+      type: Date,
+      "default": Date.now()
+    }
+  }],
   isDeleted: {
     type: Boolean,
     "default": false

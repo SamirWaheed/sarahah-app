@@ -1,6 +1,7 @@
 import express from "express"
 import * as authService from  './auth.service.js';
 import {unifiedResponse,authMiddleware} from "../../middlewares/index.js";
+import { auth } from "google-auth-library";
 
 const {authenticate} = authMiddleware;
 const authRouter = express();
@@ -38,5 +39,14 @@ authRouter.post("/logout",authenticate,unifiedResponse(async(req,res,next)=>{
   
     const result = await authService.logout(req.user, req.headers.refreshtoken);
     return ({message:"Logout Successfully", data:result,meta:{statusCode:200}}) }));
+
+authRouter.put("/verify-otp",unifiedResponse(async(req,res,next)=>{
+    const result = await authService.verifyOtp(req.body)
+    return ({message:"Email verified Successfully", data:result,meta:{statusCode:201}})
+}))
+authRouter.post("/resend-otp",unifiedResponse(async(req,res,next)=>{
+    const result = await authService.resendOtp(req.body)
+    return ({message:"OTP sent Successfully", data:result,meta:{statusCode:200}})
+}))
 
 export default authRouter

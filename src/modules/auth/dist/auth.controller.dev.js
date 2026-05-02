@@ -13,6 +13,8 @@ var authService = _interopRequireWildcard(require("./auth.service.js"));
 
 var _index = require("../../middlewares/index.js");
 
+var _googleAuthLibrary = require("google-auth-library");
+
 function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache = function _getRequireWildcardCache() { return cache; }; return cache; }
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } if (obj === null || _typeof(obj) !== "object" && typeof obj !== "function") { return { "default": obj }; } var cache = _getRequireWildcardCache(); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj["default"] = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
@@ -169,6 +171,58 @@ authRouter.post("/logout", authenticate, (0, _index.unifiedResponse)(function _c
         case 4:
         case "end":
           return _context6.stop();
+      }
+    }
+  });
+}));
+authRouter.put("/verify-otp", (0, _index.unifiedResponse)(function _callee7(req, res, next) {
+  var result;
+  return regeneratorRuntime.async(function _callee7$(_context7) {
+    while (1) {
+      switch (_context7.prev = _context7.next) {
+        case 0:
+          _context7.next = 2;
+          return regeneratorRuntime.awrap(authService.verifyOtp(req.body));
+
+        case 2:
+          result = _context7.sent;
+          return _context7.abrupt("return", {
+            message: "Email verified Successfully",
+            data: result,
+            meta: {
+              statusCode: 201
+            }
+          });
+
+        case 4:
+        case "end":
+          return _context7.stop();
+      }
+    }
+  });
+}));
+authRouter.post("/resend-otp", (0, _index.unifiedResponse)(function _callee8(req, res, next) {
+  var result;
+  return regeneratorRuntime.async(function _callee8$(_context8) {
+    while (1) {
+      switch (_context8.prev = _context8.next) {
+        case 0:
+          _context8.next = 2;
+          return regeneratorRuntime.awrap(authService.resendOtp(req.body));
+
+        case 2:
+          result = _context8.sent;
+          return _context8.abrupt("return", {
+            message: "OTP sent Successfully",
+            data: result,
+            meta: {
+              statusCode: 200
+            }
+          });
+
+        case 4:
+        case "end":
+          return _context8.stop();
       }
     }
   });

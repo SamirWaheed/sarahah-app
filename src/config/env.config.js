@@ -9,6 +9,7 @@ import ms from "ms";
 const toSeconds = (val) =>{
     
     return ms(val) / 1000};
+
 export const appConfig = {
     port: process.env.PORT ?? 3000,
 
@@ -58,4 +59,9 @@ export const redis ={
     username: process.env.REDIS_USERNAME ?? 'default',
     password :process.env.REDIS_PASSWORD,
     
+};
+export const emails = {
+    service: process.env.EMAIL_SERVICE,
+    user: process.env.EMAIL_HOST,
+    pass: process.env.EMAIL_PASSWORD
 }

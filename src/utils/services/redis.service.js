@@ -1,7 +1,7 @@
 
 import {
     redisClient
-} from "../clients/clients.index.js";
+} from "../clients/index.clients.js";
 
 export const stringServices = {
 

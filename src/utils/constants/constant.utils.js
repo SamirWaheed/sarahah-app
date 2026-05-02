@@ -22,3 +22,8 @@ export const Provider_Type = {
     Facebook:"facebook",
     Local:"local"
 }
+
+export const Channels = {
+    Email:'email',
+    Sms:"sms"
+}

@@ -4,14 +4,14 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _securityIndex = require("./security/security.index.js");
+var _indexSecurity = require("./security/index.security.js");
 
-Object.keys(_securityIndex).forEach(function (key) {
+Object.keys(_indexSecurity).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
   Object.defineProperty(exports, key, {
     enumerable: true,
     get: function get() {
-      return _securityIndex[key];
+      return _indexSecurity[key];
     }
   });
 });
@@ -28,26 +28,38 @@ Object.keys(_constantUtils).forEach(function (key) {
   });
 });
 
-var _clientsIndex = require("./clients/clients.index.js");
+var _indexClients = require("./clients/index.clients.js");
 
-Object.keys(_clientsIndex).forEach(function (key) {
+Object.keys(_indexClients).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
   Object.defineProperty(exports, key, {
     enumerable: true,
     get: function get() {
-      return _clientsIndex[key];
+      return _indexClients[key];
     }
   });
 });
 
-var _serviceIndex = require("./services/service.index.js");
+var _indexService = require("./services/index.service.js");
 
-Object.keys(_serviceIndex).forEach(function (key) {
+Object.keys(_indexService).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
   Object.defineProperty(exports, key, {
     enumerable: true,
     get: function get() {
-      return _serviceIndex[key];
+      return _indexService[key];
+    }
+  });
+});
+
+var _indexTemplates = require("./templates/index.templates.js");
+
+Object.keys(_indexTemplates).forEach(function (key) {
+  if (key === "default" || key === "__esModule") return;
+  Object.defineProperty(exports, key, {
+    enumerable: true,
+    get: function get() {
+      return _indexTemplates[key];
     }
   });
 });

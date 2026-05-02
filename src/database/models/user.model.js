@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-import { User_Role, Gender,Status,Provider_Type } from "../../utils/utils.index.js";
+import { User_Role, Gender,Status,Provider_Type,Channels} from "../../utils/utils.index.js";
 
 const userSchema = new mongoose.Schema({
     firstName:{
@@ -80,6 +80,29 @@ const userSchema = new mongoose.Schema({
         enum: Object.values(Provider_Type),
         default: Provider_Type.Local
     },
+    isEmailVerified:{
+        type: Boolean,
+        default: false
+    },
+    OTPs:[{
+        value:{
+            type:String,
+            required:true
+        },
+        expireAt:{
+            type: Date,
+            default: Date.now() +( 5*60*1000)
+        },
+        channel:{
+            type: String,
+            enum:Object.values(Channels),
+            default : Channels.Email
+        },
+        createdAt:{
+            type: Date,
+            default: Date.now()
+        }
+    }],
     isDeleted:{
         type: Boolean,
         default:false

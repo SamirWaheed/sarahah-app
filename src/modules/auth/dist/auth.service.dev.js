@@ -5,7 +5,7 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.logout = exports.gmailLogin = exports.gmailSignUp = exports.refreshToken = exports.login = exports.signUp = void 0;
+exports.logout = exports.gmailLogin = exports.gmailSignUp = exports.refreshToken = exports.login = exports.resendOtp = exports.verifyOtp = exports.signUp = void 0;
 
 var _index = require("../../config/index.js");
 
@@ -13,11 +13,9 @@ var _indexRepo = require("../../database/repository/index.repo.js");
 
 var _crypto = _interopRequireWildcard(require("crypto"));
 
-var _jwtUtils = require("../../utils/security/jwt.utils.js");
+var _googleAuthLibrary = require("google-auth-library");
 
 var _utilsIndex = require("../../utils/utils.index.js");
-
-var _googleAuthLibrary = require("google-auth-library");
 
 function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache = function _getRequireWildcardCache() { return cache; }; return cache; }
 
@@ -148,7 +146,7 @@ var createOrUpdateGoogleUser = function createOrUpdateGoogleUser(user, payload) 
 };
 
 var signUp = function signUp(body) {
-  var firstName, lastName, email, password, gender, role, phone, checkEmail, hashPass, user, newUser;
+  var firstName, lastName, email, password, gender, role, phone, checkEmail, hashPass, user, otp, newUser;
   return regeneratorRuntime.async(function signUp$(_context3) {
     while (1) {
       switch (_context3.prev = _context3.next) {
@@ -194,14 +192,25 @@ var signUp = function signUp(body) {
             user.phone = _utilsIndex.encryptionMethods.encrypt(phone);
           }
 
-          _context3.next = 13;
+          otp = _crypto["default"].randomInt(100000, 999999).toString();
+          user.OTPs = [{
+            value: otp
+          }];
+
+          _utilsIndex.emailEvents.emit("sendEmail", {
+            to: user.email,
+            subject: "Verify Email with Otp ",
+            html: (0, _utilsIndex.otpTemplate)(user.firstName, otp)
+          });
+
+          _context3.next = 16;
           return regeneratorRuntime.awrap(_indexRepo.userRepository.createDocument(user));
 
-        case 13:
+        case 16:
           newUser = _context3.sent;
           return _context3.abrupt("return", newUser);
 
-        case 15:
+        case 18:
         case "end":
           return _context3.stop();
       }
@@ -211,21 +220,32 @@ var signUp = function signUp(body) {
 
 exports.signUp = signUp;
 
-var login = function login(body) {
-  var email, password, user, verify, _buildTokens, accessToken, refreshToken, _user$toObject, hashedPass, safeUser;
-
-  return regeneratorRuntime.async(function login$(_context4) {
+var verifyOtp = function verifyOtp(body) {
+  var email, otp, user, validOtp, newOtpArray, verifiedEmail;
+  return regeneratorRuntime.async(function verifyOtp$(_context4) {
     while (1) {
       switch (_context4.prev = _context4.next) {
         case 0:
-          email = body.email, password = body.password;
+          /*
+            input : otp, email
+            output : verified Email 
+            process:{
+                    -find user ByEmail 
+                    -check if user found
+                    -return valid otp 
+                    -check is otp expired 
+                    -if otp valid: 
+                        - return new array without old otp
+                        - update userSchema with valid email and new otp array
+            }
+          */
+          email = body.email, otp = body.otp;
           _context4.next = 3;
           return regeneratorRuntime.awrap(_indexRepo.userRepository.findByEmail({
             email: email
           }, {
-            password: 1,
             email: 1,
-            role: 1
+            OTPs: 1
           }));
 
         case 3:
@@ -236,6 +256,187 @@ var login = function login(body) {
             break;
           }
 
+          throw new Error("Invalid Email", {
+            cause: {
+              statusCode: 401
+            }
+          });
+
+        case 6:
+          validOtp = user.OTPs.find(function (_ref) {
+            var value = _ref.value;
+            return value === otp;
+          });
+
+          if (validOtp) {
+            _context4.next = 9;
+            break;
+          }
+
+          throw new Error("Invalid OTP", {
+            cause: {
+              statusCode: 404
+            }
+          });
+
+        case 9:
+          if (!(validOtp.expireAt < Date.now())) {
+            _context4.next = 11;
+            break;
+          }
+
+          throw new Error("Invalid OTP", {
+            cause: {
+              statusCode: 404
+            }
+          });
+
+        case 11:
+          newOtpArray = user.OTPs.filter(function (_ref2) {
+            var value = _ref2.value;
+            return value !== otp;
+          });
+          _context4.next = 14;
+          return regeneratorRuntime.awrap(_indexRepo.userRepository.findAndUpdateDocument(user._id, {
+            isEmailVerified: true,
+            OTPs: newOtpArray
+          }, {
+            "new": true,
+            runValidator: true
+          }));
+
+        case 14:
+          verifiedEmail = _context4.sent;
+          return _context4.abrupt("return", verifiedEmail);
+
+        case 16:
+        case "end":
+          return _context4.stop();
+      }
+    }
+  });
+};
+
+exports.verifyOtp = verifyOtp;
+
+var resendOtp = function resendOtp(body) {
+  var email, user, latestOtp, leftTimeSec, otp;
+  return regeneratorRuntime.async(function resendOtp$(_context5) {
+    while (1) {
+      switch (_context5.prev = _context5.next) {
+        case 0:
+          email = body.email;
+          _context5.next = 3;
+          return regeneratorRuntime.awrap(_indexRepo.userRepository.findByEmail({
+            email: email
+          }, {
+            email: 1,
+            firstName: 1,
+            isEmailVerified: 1,
+            OTPs: 1
+          }));
+
+        case 3:
+          user = _context5.sent;
+
+          if (user) {
+            _context5.next = 6;
+            break;
+          }
+
+          throw new Error("Invalid Email", {
+            cause: {
+              statusCode: 404
+            }
+          });
+
+        case 6:
+          if (!user.isEmailVerified) {
+            _context5.next = 8;
+            break;
+          }
+
+          throw new Error("Email Already Verified", {
+            cause: {
+              statusCode: 409
+            }
+          });
+
+        case 8:
+          latestOtp = user.OTPs;
+          console.log(latestOtp);
+
+          if (!latestOtp) {
+            _context5.next = 14;
+            break;
+          }
+
+          leftTimeSec = Math.floor(Date.now() - new Date(latestOtp.createdAt).getTime() / 1000);
+
+          if (!(leftTimeSec < 60)) {
+            _context5.next = 14;
+            break;
+          }
+
+          throw new Error("Please Wait 1 minute to send OTP again", {
+            cause: {
+              statusCode: 429
+            }
+          });
+
+        case 14:
+          otp = _crypto["default"].randomInt(100000, 999999).toString();
+          _context5.t0 = regeneratorRuntime;
+          _context5.next = 18;
+          return regeneratorRuntime.awrap(_utilsIndex.emailEvents.emit("sendEmail", {
+            to: user.email,
+            subject: "OTP",
+            html: (0, _utilsIndex.otpTemplate)(user.firstName, otp)
+          }));
+
+        case 18:
+          _context5.t1 = _context5.sent;
+          _context5.next = 21;
+          return _context5.t0.awrap.call(_context5.t0, _context5.t1);
+
+        case 21:
+          return _context5.abrupt("return", "OTP sent");
+
+        case 22:
+        case "end":
+          return _context5.stop();
+      }
+    }
+  });
+};
+
+exports.resendOtp = resendOtp;
+
+var login = function login(body) {
+  var email, password, user, verify, _buildTokens, accessToken, refreshToken, _user$toObject, hashedPass, safeUser;
+
+  return regeneratorRuntime.async(function login$(_context6) {
+    while (1) {
+      switch (_context6.prev = _context6.next) {
+        case 0:
+          email = body.email, password = body.password;
+          _context6.next = 3;
+          return regeneratorRuntime.awrap(_indexRepo.userRepository.findByEmail({
+            email: email
+          }, {
+            password: 1,
+            email: 1,
+            role: 1
+          }));
+
+        case 3:
+          user = _context6.sent;
+
+          if (user) {
+            _context6.next = 6;
+            break;
+          }
+
           throw new Error("Email not Found", {
             cause: {
               statusCode: 404
@@ -243,14 +444,14 @@ var login = function login(body) {
           });
 
         case 6:
-          _context4.next = 8;
+          _context6.next = 8;
           return regeneratorRuntime.awrap(_utilsIndex.hashingMethods.verifyPassword(user.password, password));
 
         case 8:
-          verify = _context4.sent;
+          verify = _context6.sent;
 
           if (verify) {
-            _context4.next = 11;
+            _context6.next = 11;
             break;
           }
 
@@ -263,7 +464,7 @@ var login = function login(body) {
         case 11:
           _buildTokens = buildTokens(user), accessToken = _buildTokens.accessToken, refreshToken = _buildTokens.refreshToken;
           _user$toObject = user.toObject(), hashedPass = _user$toObject.password, safeUser = _objectWithoutProperties(_user$toObject, ["password"]);
-          return _context4.abrupt("return", {
+          return _context6.abrupt("return", {
             tokens: {
               accessToken: accessToken,
               refreshToken: refreshToken
@@ -273,7 +474,7 @@ var login = function login(body) {
 
         case 14:
         case "end":
-          return _context4.stop();
+          return _context6.stop();
       }
     }
   });
@@ -284,9 +485,9 @@ exports.login = login;
 var refreshToken = function refreshToken(header) {
   var refreshToken, _jwtMethods$authentic, decoded, payload, _jwtMethods$generateL2, accessToken;
 
-  return regeneratorRuntime.async(function refreshToken$(_context5) {
+  return regeneratorRuntime.async(function refreshToken$(_context7) {
     while (1) {
-      switch (_context5.prev = _context5.next) {
+      switch (_context7.prev = _context7.next) {
         case 0:
           refreshToken = header.authorization;
           _jwtMethods$authentic = _utilsIndex.jwtMethods.authenticateToken({
@@ -307,13 +508,13 @@ var refreshToken = function refreshToken(header) {
             },
             requiredToken: _utilsIndex.Token_Type.Access
           }), accessToken = _jwtMethods$generateL2.accessToken;
-          return _context5.abrupt("return", {
+          return _context7.abrupt("return", {
             accessToken: accessToken
           });
 
         case 5:
         case "end":
-          return _context5.stop();
+          return _context7.stop();
       }
     }
   });
@@ -323,19 +524,19 @@ exports.refreshToken = refreshToken;
 
 var gmailSignUp = function gmailSignUp(body) {
   var idToken, payload, user, userdata;
-  return regeneratorRuntime.async(function gmailSignUp$(_context6) {
+  return regeneratorRuntime.async(function gmailSignUp$(_context8) {
     while (1) {
-      switch (_context6.prev = _context6.next) {
+      switch (_context8.prev = _context8.next) {
         case 0:
           idToken = body.idToken;
-          _context6.next = 3;
+          _context8.next = 3;
           return regeneratorRuntime.awrap(verifyGoogleToken(idToken));
 
         case 3:
-          payload = _context6.sent;
+          payload = _context8.sent;
 
           if (!(!payload || !payload.email_verified)) {
-            _context6.next = 6;
+            _context8.next = 6;
             break;
           }
 
@@ -346,7 +547,7 @@ var gmailSignUp = function gmailSignUp(body) {
           });
 
         case 6:
-          _context6.next = 8;
+          _context8.next = 8;
           return regeneratorRuntime.awrap(_indexRepo.userRepository.findOne({
             $or: [{
               email: payload.email,
@@ -356,20 +557,20 @@ var gmailSignUp = function gmailSignUp(body) {
           }));
 
         case 8:
-          user = _context6.sent;
-          _context6.next = 11;
+          user = _context8.sent;
+          _context8.next = 11;
           return regeneratorRuntime.awrap(createOrUpdateGoogleUser({
             user: user,
             payload: payload
           }));
 
         case 11:
-          userdata = _context6.sent;
-          return _context6.abrupt("return", buildTokens(userData));
+          userdata = _context8.sent;
+          return _context8.abrupt("return", buildTokens(userData));
 
         case 13:
         case "end":
-          return _context6.stop();
+          return _context8.stop();
       }
     }
   });
@@ -379,19 +580,19 @@ exports.gmailSignUp = gmailSignUp;
 
 var gmailLogin = function gmailLogin(body) {
   var idToken, payload, user;
-  return regeneratorRuntime.async(function gmailLogin$(_context7) {
+  return regeneratorRuntime.async(function gmailLogin$(_context9) {
     while (1) {
-      switch (_context7.prev = _context7.next) {
+      switch (_context9.prev = _context9.next) {
         case 0:
           idToken = body.idToken;
-          _context7.next = 3;
+          _context9.next = 3;
           return regeneratorRuntime.awrap(verifyGoogleToken(idToken));
 
         case 3:
-          payload = _context7.sent;
+          payload = _context9.sent;
 
           if (!(!payload || !payload.email_verified)) {
-            _context7.next = 6;
+            _context9.next = 6;
             break;
           }
 
@@ -402,7 +603,7 @@ var gmailLogin = function gmailLogin(body) {
           });
 
         case 6:
-          _context7.next = 8;
+          _context9.next = 8;
           return regeneratorRuntime.awrap(_indexRepo.userRepository.findOne({
             $or: [{
               email: payload.email,
@@ -412,10 +613,10 @@ var gmailLogin = function gmailLogin(body) {
           }));
 
         case 8:
-          user = _context7.sent;
+          user = _context9.sent;
 
           if (user) {
-            _context7.next = 11;
+            _context9.next = 11;
             break;
           }
 
@@ -426,11 +627,11 @@ var gmailLogin = function gmailLogin(body) {
           });
 
         case 11:
-          return _context7.abrupt("return", buildTokens(user));
+          return _context9.abrupt("return", buildTokens(user));
 
         case 12:
         case "end":
-          return _context7.stop();
+          return _context9.stop();
       }
     }
   });
@@ -439,26 +640,26 @@ var gmailLogin = function gmailLogin(body) {
 exports.gmailLogin = gmailLogin;
 
 var logout = function logout(accessTokenData, refreshToken) {
-  var _ref, refreshTokenData, refreshExpiration, refreshTokenId, accessExpiration, accessTokenId;
+  var _ref3, refreshTokenData, refreshExpiration, refreshTokenId, accessExpiration, accessTokenId;
 
-  return regeneratorRuntime.async(function logout$(_context8) {
+  return regeneratorRuntime.async(function logout$(_context10) {
     while (1) {
-      switch (_context8.prev = _context8.next) {
+      switch (_context10.prev = _context10.next) {
         case 0:
-          _context8.next = 2;
-          return regeneratorRuntime.awrap((0, _jwtUtils.authenticateToken)(refreshToken, _utilsIndex.Token_Type.Refresh));
+          _context10.next = 2;
+          return regeneratorRuntime.awrap(authenticateToken(refreshToken, _utilsIndex.Token_Type.Refresh));
 
         case 2:
-          _ref = _context8.sent;
-          refreshTokenData = _ref.decodedData;
+          _ref3 = _context10.sent;
+          refreshTokenData = _ref3.decodedData;
           refreshExpiration = refreshTokenData.exp, refreshTokenId = refreshTokenData.jti;
           accessExpiration = accessTokenData.exp, accessTokenId = accessTokenData.jti;
           Promise.all([(0, _utilsIndex.blacklistTokens)("Blacklist:".concat(_utilsIndex.Token_Type.Refresh, ":").concat(refreshTokenId), refreshExpiration), (0, _utilsIndex.blacklistTokens)("Blacklist:".concat(_utilsIndex.Token_Type.Access, ":").concat(accessTokenId), accessExpiration)]);
-          return _context8.abrupt("return", true);
+          return _context10.abrupt("return", true);
 
         case 8:
         case "end":
-          return _context8.stop();
+          return _context10.stop();
       }
     }
   });

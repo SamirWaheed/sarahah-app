@@ -262,7 +262,7 @@ export const resendOtp = async (body) => {
 
     if (latestOtp) {
         const leftTimeSec = Math.floor((Date.now() - new Date(latestOtp.createdAt).getTime())/ 1000) 
-        
+
         if (leftTimeSec < 60) {
             throw new Error("Please Wait 1 minute to send OTP again", {
                 cause: {
